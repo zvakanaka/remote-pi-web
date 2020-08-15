@@ -1,5 +1,7 @@
 <canvas></canvas>
 <script>
+const REFRESH_INTERVAL_MS = 5 * 1000
+
 const state = {
   canvas: document.querySelector('canvas'), // defaults to 300x150
   ratio: null,
@@ -84,4 +86,10 @@ document.addEventListener('contextmenu', function(e) {
 function mapButton(eventButton) {
   return [1, 2, 3][eventButton]
 }
+
+const refreshHandle = setInterval(() => {
+  if (!document.hidden) {
+    state.loadImage()
+  }
+}, REFRESH_INTERVAL_MS)
 </script>
