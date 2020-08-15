@@ -18,14 +18,14 @@ router.get('/screen', async (req, res) => {
   }
 
   const options = {
-    quality: 25, // NOTE: does not work with default format - PNG
-    fileName: `./screen/${req.query.uuid}.jpg`
+    quality: process.env.SCREENSHOT_QUALITY || 25, // NOTE: this param does not work with default format - PNG
+    fileName: `./screen/${process.env.KEEP_SCREENSHOTS ? `${parseFloat(req.query.uuid)}.jpg` : 'screenshot.jpg'}`
   };
 
 
   // scrot man page: http://manpages.ubuntu.com/manpages/precise/man1/scrot.1.html
   const cliOptions = [
-    `--quality ${options.quality || 100}`,
+    `--quality ${parseInt(options.quality)}`,
     '--overwrite',
     `--pointer`,
     options.fileName
