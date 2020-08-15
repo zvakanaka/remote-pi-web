@@ -5,3 +5,4 @@ coverage
 .env
 npm-debug.log
 build
+screen/*.jpg
