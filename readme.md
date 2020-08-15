@@ -2,9 +2,10 @@
 Operate your Raspberry Pi from a web browser.
 
 ## The Plan
-[x] Capture the screen and make it accessible to the web client  
-[x] Create a canvas that scales to the browser's screen  
-[x] Allow controlling the server's desktop from the canvas  
+[x] Screen viewable from web client  
+[x] Scale canvas to browser's screen  
+[x] Mouse control  
+[ ] Keyboard control  
 [ ] Client-side configuration  
 [ ] Server configuration
 
