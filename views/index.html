@@ -48,11 +48,31 @@ state.loadImage()
 
 window.onresize = () => state.draw()
 
-state.canvas.addEventListener('mousemove', (e) => {
+/*
+ * USAGE:
+ * document.querySelector('.thing').addEventListener('scroll', e => debounce(e, cb));
+ */
+let lastBounce = Date.now();
+let queuedBounce = false;
+function debounce(e, callback, delayMS = 100) {
+  const epoch = Date.now();
+  if (epoch - lastBounce > delayMS) {
+    callback();
+    lastBounce = Date.now();
+  } else if (!queuedBounce) {
+    queuedBounce = true; // lock
+    setTimeout(() => { // queue a bounce
+      callback();
+      lastBounce = Date.now();
+      queuedBounce = false;
+    }, delayMS);
+  }
+}
+state.canvas.addEventListener('mousemove', (e) => debounce(e, () => {
   state.lastClickX = e.x - state.leftOffset
   state.lastClickY = e.y - state.topOffset
   state.loadImage(parseInt(state.lastClickX * state.ratio), parseInt(state.lastClickY * state.ratio))
-})
+}, 500))
 state.canvas.addEventListener('mousedown', (e) => {
   state.lastClickX = e.x - state.leftOffset
   state.lastClickY = e.y - state.topOffset
