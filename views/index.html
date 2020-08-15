@@ -1,0 +1,67 @@
+<canvas></canvas>
+<script>
+const state = {
+  canvas: document.querySelector('canvas'), // defaults to 300x150
+  ratio: null,
+}
+state.ctx = state.canvas.getContext('2d')
+
+state.draw = () => {
+  // contain image within view
+  const maxWidth = window.innerWidth
+  const maxHeight = window.innerHeight
+  const imageWidth = state.image.width
+  const imageHeight = state.image.height
+  state.canvas.width = imageWidth
+  state.canvas.height = imageHeight
+  state.ratio = null
+
+  if (maxWidth < imageWidth) {
+    if (imageWidth > maxWidth) {
+      state.canvas.width = maxWidth
+      state.ratio = imageWidth / maxWidth
+      state.canvas.height = imageHeight / state.ratio
+    }
+  }
+  if (!state.ratio && maxHeight < imageHeight) {
+    if (imageHeight > maxHeight) {
+      state.canvas.height = maxHeight
+      state.ratio = imageHeight / maxHeight
+      state.canvas.width = imageWidth / state.ratio
+    }
+  }
+  state.ctx.drawImage(state.image, 0, 0, state.canvas.width, state.canvas.height)
+  state.topOffset = state.canvas.getBoundingClientRect().top
+  state.leftOffset = state.canvas.getBoundingClientRect().left
+}
+
+state.loadImage = (x, y, mouseButton) => {
+  const imageUrl = `./screen?uuid=${Math.random()}${x && y ? `&x=${x}&y=${y}` : ''}${typeof mouseButton !== 'undefined' ? `&click=${mouseButton}` : ''}`
+  state.image = new Image()
+  state.image.crossOrigin = 'anonymous'
+  state.image.src = imageUrl
+  state.image.onload = state.draw
+}
+
+state.loadImage()
+
+
+window.onresize = () => state.draw()
+
+state.canvas.addEventListener('mousemove', (e) => {
+  state.lastClickX = e.x - state.leftOffset
+  state.lastClickY = e.y - state.topOffset
+  state.loadImage(parseInt(state.lastClickX * state.ratio), parseInt(state.lastClickY * state.ratio))
+})
+state.canvas.addEventListener('mousedown', (e) => {
+  state.lastClickX = e.x - state.leftOffset
+  state.lastClickY = e.y - state.topOffset
+  state.loadImage(parseInt(state.lastClickX * state.ratio), parseInt(state.lastClickY * state.ratio), mapButton(e.button))
+})
+document.addEventListener('contextmenu', function(e) {
+  e.preventDefault()
+})
+function mapButton(eventButton) {
+  return [1, 2, 3][eventButton]
+}
+</script>
