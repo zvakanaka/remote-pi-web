@@ -8,6 +8,7 @@ Operate your Raspberry Pi from a web browser.
 - [ ] Keyboard control (use `matchbox-keyboard` for now)  
 - [ ] Client-side configuration  
 - [x] Server configuration
+- [x] Use sockets for screen updates/control
 
 ## Installation
 ```sh
@@ -20,7 +21,7 @@ npm install
 ```
 
 ## Run
-Other env vars: `SCREENSHOT_QUALITY` (defaults to 25), `KEEP_SCREENSHOTS` (defaults to false)
+Other env vars: `SCREENSHOT_QUALITY` (defaults to 25), `KEEP_SCREENSHOTS` (defaults to false), `VIEW_ONLY` (defaults to false)
 ```
 env DISPLAY=:0 npm start
 ``` 

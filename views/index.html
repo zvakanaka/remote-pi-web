@@ -1,7 +1,19 @@
 <canvas></canvas>
+<script src="./socket.io/socket.io.js"></script>
 <script>
 const REFRESH_INTERVAL_MS = 5 * 1000
 
+function getAppPath() {
+  const pathname = window.location.pathname
+  const matchArr = pathname.match(/(^.*)(\/.*$)/)
+  if (matchArr) {
+    const [, path, suffix] = matchArr
+    if (!suffix.includes('.')) return pathname
+    return path
+  }
+  return pathname
+}
+const appPath = getAppPath()
 const state = {
   canvas: document.querySelector('canvas'), // defaults to 300x150
   ratio: null,
@@ -37,18 +49,15 @@ state.draw = () => {
   state.leftOffset = state.canvas.getBoundingClientRect().left
 }
 
-state.loadImage = (x, y, mouseButton) => {
-  const imageUrl = `./screen?uuid=${Math.random()}${x && y ? `&x=${x}&y=${y}` : ''}${typeof mouseButton !== 'undefined' ? `&click=${mouseButton}` : ''}`
+state.drawImageFromSocket = (data) => {
   state.image = new Image()
-  state.image.crossOrigin = 'anonymous'
-  state.image.src = imageUrl
+  const arrayBufferView = new Uint8Array(data)
+  const blob = new Blob([ arrayBufferView ], { type: 'image/jpeg'})
+  state.image.src = window.URL.createObjectURL(blob)
   state.image.onload = state.draw
 }
 
-state.loadImage()
-
-
-window.onresize = () => state.draw()
+const socket = io(appPath)
 
 /*
  * USAGE:
@@ -70,26 +79,40 @@ function debounce(e, callback, delayMS = 100) {
     }, delayMS);
   }
 }
-state.canvas.addEventListener('mousemove', (e) => debounce(e, () => {
-  state.lastClickX = e.x - state.leftOffset
-  state.lastClickY = e.y - state.topOffset
-  state.loadImage(parseInt(state.lastClickX * state.ratio), parseInt(state.lastClickY * state.ratio))
-}, 500))
-state.canvas.addEventListener('mousedown', (e) => {
-  state.lastClickX = e.x - state.leftOffset
-  state.lastClickY = e.y - state.topOffset
-  state.loadImage(parseInt(state.lastClickX * state.ratio), parseInt(state.lastClickY * state.ratio), mapButton(e.button))
-})
-document.addEventListener('contextmenu', function(e) {
-  e.preventDefault()
-})
-function mapButton(eventButton) {
-  return [1, 2, 3][eventButton]
+function controlObj(ev, useMouse = false) {
+  state.lastClickX = ev.x - state.leftOffset
+  state.lastClickY = ev.y - state.topOffset
+  const controlObj = {
+    x: parseInt(state.lastClickX * state.ratio),
+    y: parseInt(state.lastClickY * state.ratio),
+  }
+  if (useMouse) controlObj.click =  mapButton(ev.button)
+  return controlObj
 }
+state.canvas.addEventListener('mousemove', (ev) => debounce(ev, () => {
+  socket.emit('control', controlObj(ev))
+}, 500))
+state.canvas.addEventListener('mousedown', (ev) => {
+  socket.emit('control', controlObj(ev, true))
+})
+// prevent right-click menu
+document.addEventListener('contextmenu', (ev) => ev.preventDefault())
+function mapButton(eventButton) { return [1, 2, 3][eventButton] }
 
 const refreshHandle = setInterval(() => {
-  if (!document.hidden) {
-    state.loadImage()
+  if (!document.hidden) { // active tab
+    socket.emit('screen')
   }
 }, REFRESH_INTERVAL_MS)
+
+socket.on('connect', function(){
+  socket.emit('screen')
+  window.onresize = () => state.draw()
+})
+
+socket.on('render', state.drawImageFromSocket)
+
+socket.on('disconnect', function(){
+  console.warn('disconnected from socket')
+})
 </script>
