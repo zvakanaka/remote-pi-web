@@ -57,7 +57,7 @@ state.drawImageFromSocket = (data) => {
   state.image.onload = state.draw
 }
 
-const socket = io(appPath)
+const socket = io('/', {path: appPath + 'socket.io'})
 
 /*
  * USAGE:
