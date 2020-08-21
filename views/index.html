@@ -8,7 +8,7 @@ function getAppPath() {
   const matchArr = pathname.match(/(^.*)(\/.*$)/)
   if (matchArr) {
     const [, path, suffix] = matchArr
-    if (!suffix.includes('.')) return pathname
+    if (!suffix.includes('.') || suffix === '/') return pathname
     return path
   }
   return pathname
