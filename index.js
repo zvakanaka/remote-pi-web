@@ -1,6 +1,7 @@
 const express = require('express')
 const routes = require('./routes')
 const logger = require('./lib/middleware/logger')
+const sockets = require('./sockets')
 
 const PORT = process.env.PORT || 3000
 
@@ -13,7 +14,9 @@ app.use(logger)
 
 app.use('/', routes)
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(new Date().toString())
   console.log(`Server listening at http://localhost:${PORT}`)
 })
+
+sockets(server)
