@@ -5,14 +5,14 @@ Operate your Raspberry Pi from a web browser.
 - [x] Screen viewable from web client  
 - [x] Scale canvas to browser's screen  
 - [x] Mouse control (still missing drag-and-drop)  
-- [ ] Keyboard control (use `matchbox-keyboard` for now)  
+- [x] Keyboard control  
 - [ ] Client-side configuration  
 - [x] Server configuration
-- [x] Use sockets for screen updates/control
+- [x] Sockets
 
 ## Installation
+[Install Node.js](https://github.com/nvm-sh/nvm#about)
 ```sh
-sudo apt install nodejs
 sudo apt install xdotool
 
 git clone https://github.com/zvakanaka/remote-pi-web
@@ -27,6 +27,6 @@ env DISPLAY=:0 npm start
 ``` 
 
 ## System Dependencies
-- `npm` (comes with `nodejs` package)
+- `npm` ([Comes with Node.js when installed using nvm](https://github.com/nvm-sh/nvm#about))
 - `scrot` (for capturing the screen - already installed on Raspberry Pi OS)
 - `xdotool` (for mouse and keyboard control)

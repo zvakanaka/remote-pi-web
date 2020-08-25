@@ -28,7 +28,7 @@ state.draw = () => {
   const imageHeight = state.image.height
   state.canvas.width = imageWidth
   state.canvas.height = imageHeight
-  state.ratio = null
+  state.ratio = 1
 
   if (maxWidth < imageWidth) {
     if (imageWidth > maxWidth) {
@@ -96,8 +96,27 @@ state.canvas.addEventListener('mousedown', (ev) => {
   socket.emit('control', controlObj(ev, true))
 })
 // prevent right-click menu
-document.addEventListener('contextmenu', (ev) => ev.preventDefault())
+document.addEventListener('contextmenu', (ev) => {
+  if (ev.target.matches('canvas')) ev.preventDefault()
+})
 function mapButton(eventButton) { return [1, 2, 3][eventButton] }
+
+function ignoreEvent(ev) {
+  ev.preventDefault();
+  ev.stopPropagation();
+}
+// document.addEventListener('keypress', ignoreEvent)
+document.addEventListener('keyup', ignoreEvent)
+document.addEventListener('keydown', ev => {
+  ignoreEvent(ev)
+  if (!['Control', 'Alt', 'Shift'].includes(ev.key))
+  socket.emit('key', {
+    key: ev.key,
+    ctrl: ev.ctrlKey,
+    alt: ev.altKey,
+    shift: ev.shiftKey
+  })
+})
 
 const refreshHandle = setInterval(() => {
   if (!document.hidden) { // active tab

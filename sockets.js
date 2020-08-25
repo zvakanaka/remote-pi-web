@@ -1,6 +1,7 @@
 const socket = require('socket.io')
 const getScreen = require('./lib/screen/getScreen')
-const sendControlEvent = require('./lib/screen/sendControlEvent')
+const sendMouseEvent = require('./lib/screen/sendMouseEvent')
+const sendKeyEvent = require('./lib/screen/sendKeyEvent')
 
 module.exports = function sockets(server) {
   const io = socket.listen(server)
@@ -15,7 +16,12 @@ module.exports = function sockets(server) {
 
     if (!process.env.VIEW_ONLY) {
       socket.on('control', async (data) => {
-        await sendControlEvent(data)
+        await sendMouseEvent(data)
+        const screen = await getScreen()
+        socket.emit('render', screen)
+      })
+      socket.on('key', async (data) => {
+        await sendKeyEvent(data)
         const screen = await getScreen()
         socket.emit('render', screen)
       })
