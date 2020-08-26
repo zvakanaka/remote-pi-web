@@ -1,7 +1,7 @@
 <canvas></canvas>
 <script src="./socket.io/socket.io.js"></script>
 <script>
-const REFRESH_INTERVAL_MS = 5 * 1000
+const REFRESH_INTERVAL_MS = .2 * 1000
 
 function getAppPath() {
   const pathname = window.location.pathname
@@ -86,20 +86,32 @@ function controlObj(ev, useMouse = false) {
     x: parseInt(state.lastClickX * state.ratio),
     y: parseInt(state.lastClickY * state.ratio),
   }
-  if (useMouse) controlObj.click =  mapButton(ev.button)
+  if (useMouse) controlObj.click =  mapButton(ev)
   return controlObj
 }
 state.canvas.addEventListener('mousemove', (ev) => debounce(ev, () => {
-  socket.emit('control', controlObj(ev))
-}, 500))
+  socket.emit('mouse', controlObj(ev))
+}, REFRESH_INTERVAL_MS))
 state.canvas.addEventListener('mousedown', (ev) => {
-  socket.emit('control', controlObj(ev, true))
+  socket.emit('mouse', controlObj(ev, true))
+})
+state.canvas.addEventListener('wheel', (ev) => {
+  if (ev.deltaY !== 0) {
+    socket.emit('mouse', controlObj(ev, true))
+  }
 })
 // prevent right-click menu
 document.addEventListener('contextmenu', (ev) => {
   if (ev.target.matches('canvas')) ev.preventDefault()
 })
-function mapButton(eventButton) { return [1, 2, 3][eventButton] }
+function mapButton(ev) {
+  if (typeof ev.deltaY !== 'undefined') {
+    if (ev.deltaY !== 0) {
+      return ev.deltaY > 0 ? 5 : 4 // 5 = scroll up, 4 = scroll down
+    }
+  }
+  return [1, 2, 3][ev.button]
+}
 
 function ignoreEvent(ev) {
   ev.preventDefault();

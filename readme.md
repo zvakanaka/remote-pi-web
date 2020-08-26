@@ -1,10 +1,10 @@
 # Remote Pi Web
 Operate your Raspberry Pi from a web browser.
 
-## The Plan
+## Roadmap
 - [x] Screen viewable from web client  
 - [x] Scale canvas to browser's screen  
-- [x] Mouse control (still missing drag-and-drop)  
+- [x] Mouse control (still missing drag)  
 - [x] Keyboard control  
 - [ ] Client-side configuration  
 - [x] Server configuration
@@ -19,6 +19,10 @@ git clone https://github.com/zvakanaka/remote-pi-web
 cd remote-pi-web
 npm install
 ```
+
+You can make your Pi think it has a screen by forcing HDMI output in the [`config.txt`](https://www.raspberrypi.org/documentation/configuration/config-txt/boot.md).
+
+This can be done by removing the `#` from the line of the `config.txt` that looks like this: `#hdmi_safe=1`.
 
 ## Run
 Other env vars: `SCREENSHOT_QUALITY` (defaults to 25), `KEEP_SCREENSHOTS` (defaults to false), `VIEW_ONLY` (defaults to false)

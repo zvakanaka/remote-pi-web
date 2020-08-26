@@ -15,7 +15,7 @@ module.exports = function sockets(server) {
     })
 
     if (!process.env.VIEW_ONLY) {
-      socket.on('control', async (data) => {
+      socket.on('mouse', async (data) => {
         await sendMouseEvent(data)
         const screen = await getScreen()
         socket.emit('render', screen)
