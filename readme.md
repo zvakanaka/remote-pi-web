@@ -4,7 +4,7 @@ Operate your Raspberry Pi from a web browser.
 ## Roadmap
 - [x] Screen viewable from web client  
 - [x] Scale canvas to browser's screen  
-- [x] Mouse control (still missing drag)  
+- [x] Mouse control
 - [x] Keyboard control  
 - [ ] Client-side configuration  
 - [x] Server configuration
