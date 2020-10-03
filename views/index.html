@@ -79,7 +79,7 @@ function debounce(e, callback, delayMS = 100) {
     }, delayMS);
   }
 }
-function controlObj(ev, useMouse = false) {
+function controlObj(ev, useMouse = false, upOrDown = false) {
   state.lastClickX = ev.x - state.leftOffset
   state.lastClickY = ev.y - state.topOffset
   const controlObj = {
@@ -87,13 +87,17 @@ function controlObj(ev, useMouse = false) {
     y: parseInt(state.lastClickY * state.ratio),
   }
   if (useMouse) controlObj.click =  mapButton(ev)
+  if (upOrDown) controlObj.upOrDown = upOrDown
   return controlObj
 }
 state.canvas.addEventListener('mousemove', (ev) => debounce(ev, () => {
   socket.emit('mouse', controlObj(ev))
 }, REFRESH_INTERVAL_MS))
 state.canvas.addEventListener('mousedown', (ev) => {
-  socket.emit('mouse', controlObj(ev, true))
+  socket.emit('mouse', controlObj(ev, true, 'down'))
+})
+state.canvas.addEventListener('mouseup', (ev) => {
+  socket.emit('mouse', controlObj(ev, true, 'up'))
 })
 state.canvas.addEventListener('wheel', (ev) => {
   if (ev.deltaY !== 0) {
