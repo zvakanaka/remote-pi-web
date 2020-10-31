@@ -1,5 +1,6 @@
 # Remote Pi Web
-Operate your Raspberry Pi from a web browser.
+Operate your Raspberry Pi from a web browser.  
+![Screen capture](https://i.imgur.com/H10m7uN.gif)
 
 ## Roadmap
 - [x] Screen viewable from web client  
