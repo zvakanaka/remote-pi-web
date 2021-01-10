@@ -3,6 +3,8 @@
 #include <X11/Xutil.h>
 //Compile hint: gcc -shared -O3 -Wall -fPIC -Wl,-soname,screen -o screen.so screen.c -lX11
 
+// THANK YOU JHolta: https://stackoverflow.com/a/16141058/4151489
+
 void getScreen(const int, const int, const int, const int, const int, const int, unsigned char *);
 void getScreen(const int xx,const int yy,const int W, const int H, const int resizedWidth,const int resizedHeight, /*out*/ unsigned char * data) 
 {
