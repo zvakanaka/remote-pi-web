@@ -1,7 +1,35 @@
 <style>
-  html {
+  div {
     background: url(data:image/jpeg;base64,${screen}) no-repeat top left fixed; 
     background-size: 1068px 1275px;
+    height: 1275px;
+  }
+  body {
+    margin: 0;
   }
 </style>
-<script>setTimeout(function() {window.location.reload()}, 400)</script>
+<div id="image"></div>
+<script>
+  setInterval(function () {
+    getBase64Image('/e-ink-image', function (data) {
+      var image = document.getElementById('image');
+      image.style.background = 'url(data:image/jpeg;base64,' + data + ') no-repeat top left fixed';
+    })
+  }, 400)
+  setTimeout(function () {
+    // refresh before the page has a chance to crash (before ~1 minute)
+    window.location.reload();
+  }, 30 * 1000)
+  function getBase64Image(url, cb) {
+    var http = new XMLHttpRequest();
+    http.open('GET', url, true);
+    http.onreadystatechange = function() {
+      if (http.readyState == 4 && http.status == 200) {
+        var resData = (http.responseText);
+        cb(resData)
+      } else if (http.status != 200) {
+      }
+    };
+    http.send();
+  }
+</script>
