@@ -10,6 +10,12 @@ router.get('/', async (req, res) => {
   res.status(200).send(renderPage('Remote Pi', pageContent, styleContent))
 })
 
+router.get('/e-ink-image', async (req, res) => {
+  const screen1 = await getScreen()
+  const screen = await read('./screen/screenshot.jpg', 'base64')
+  res.status(200).send(screen)
+})
+
 router.get('/e-ink', async (req, res) => {
   const screen1 = await getScreen()
   const screen = await read('./screen/screenshot.jpg', 'base64')
