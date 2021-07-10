@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "postinstall": "cd lib/screen; gcc -shared -O3 -Wall -fPIC -Wl,-soname,screen -o screen.so screen.c -lX11",
     "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "watch": "chokidar \"views/**\" \"**/*.js\" -c \"sleep 3 && npm start\""
@@ -14,6 +15,7 @@
   "dependencies": {
     "express": "^4.17.1",
     "ffi-napi": "^3.1.0",
+    "sharp": "^0.28.3",
     "socket.io": "^2.3.0"
   },
   "devDependencies": {
