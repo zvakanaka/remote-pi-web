@@ -26,12 +26,11 @@ You can make your Pi think it has a screen by forcing HDMI output in the [`confi
 This can be done by removing the `#` from the line of the `config.txt` that looks like this: `#hdmi_safe=1`.
 
 ## Run
-Other env vars: `SCREENSHOT_QUALITY` (defaults to 25), `KEEP_SCREENSHOTS` (defaults to false), `VIEW_ONLY` (defaults to false)
+Other env vars: `CAPTURE_METHOD` (defaults to 'native', 'scrot' requires it to be installed), `QUALITY` (defaults to 25), `REFRESH_INTERVAL_MS` (defaults to 500), `VIEW_ONLY` (defaults to false)
 ```
 env DISPLAY=:0 npm start
 ``` 
 
 ## System Dependencies
 - `npm` ([Comes with Node.js when installed using nvm](https://github.com/nvm-sh/nvm#about))
-- `scrot` (for capturing the screen - already installed on Raspberry Pi OS)
-- `xdotool` (for mouse and keyboard control)
+- `xdotool` (if you want mouse and keyboard control)
