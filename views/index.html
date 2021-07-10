@@ -1,153 +1,164 @@
 <canvas></canvas>
 <script src="./socket.io/socket.io.js"></script>
 <script>
-const REFRESH_INTERVAL_MS = .2 * 1000
+  const REFRESH_INTERVAL_MS = 0.5 * 1000
+  let lastRenderTime = 0
 
-function getAppPath() {
-  const pathname = window.location.pathname
-  const matchArr = pathname.match(/(^.*)(\/.*$)/)
-  if (matchArr) {
-    const [, path, suffix] = matchArr
-    if (!suffix.includes('.') || suffix === '/') return pathname
-    return path
+  function getAppPath() {
+    const pathname = window.location.pathname
+    const matchArr = pathname.match(/(^.*)(\/.*$)/)
+    if (matchArr) {
+      const [, path, suffix] = matchArr
+      if (!suffix.includes('.') || suffix === '/') return pathname
+      return path
+    }
+    return pathname
   }
-  return pathname
-}
-const appPath = getAppPath()
-const state = {
-  canvas: document.querySelector('canvas'), // defaults to 300x150
-  ratio: null,
-}
-state.ctx = state.canvas.getContext('2d')
+  const appPath = getAppPath()
+  const state = {
+    canvas: document.querySelector('canvas'), // defaults to 300x150
+    ratio: null,
+  }
+  state.ctx = state.canvas.getContext('2d')
 
-state.draw = () => {
-  // contain image within view
-  const maxWidth = window.innerWidth
-  const maxHeight = window.innerHeight
-  const imageWidth = state.image.width
-  const imageHeight = state.image.height
-  state.canvas.width = imageWidth
-  state.canvas.height = imageHeight
-  state.ratio = 1
+  state.draw = () => {
+    // contain image within view
+    const maxWidth = window.innerWidth
+    const maxHeight = window.innerHeight
+    const imageWidth = state.image.width
+    const imageHeight = state.image.height
+    state.canvas.width = imageWidth
+    state.canvas.height = imageHeight
+    state.ratio = 1
 
-  if (maxWidth < imageWidth) {
-    if (imageWidth > maxWidth) {
-      state.canvas.width = maxWidth
-      state.ratio = imageWidth / maxWidth
-      state.canvas.height = imageHeight / state.ratio
+    if (maxWidth < imageWidth) {
+      if (imageWidth > maxWidth) {
+        state.canvas.width = maxWidth
+        state.ratio = imageWidth / maxWidth
+        state.canvas.height = imageHeight / state.ratio
+      }
+    }
+    if (!state.ratio && maxHeight < imageHeight) {
+      if (imageHeight > maxHeight) {
+        state.canvas.height = maxHeight
+        state.ratio = imageHeight / maxHeight
+        state.canvas.width = imageWidth / state.ratio
+      }
+    }
+    state.ctx.drawImage(state.image, 0, 0, state.canvas.width, state.canvas.height)
+    state.topOffset = state.canvas.getBoundingClientRect().top
+    state.leftOffset = state.canvas.getBoundingClientRect().left
+  }
+
+  state.drawImageFromSocket = (data) => {
+    // console.time('drawImageFromSocket')
+    state.image = new Image()
+    const arrayBufferView = new Uint8Array(data)
+    const blob = new Blob([arrayBufferView], { type: 'image/jpeg' })
+    if (Date.now() - lastRenderTime >= REFRESH_INTERVAL_MS) {
+      // console.log(`lastRenderTime: ${Date.now() - lastRenderTime}`)
+      state.image.src = window.URL.createObjectURL(blob)
+    } else {
+      console.warn(`skipping render since it's only been ${Date.now() - lastRenderTime} MS`)
+    }
+    state.image.onload = () => {
+      state.draw()
+      lastRenderTime = Date.now()
+      // console.timeEnd('drawImageFromSocket')
     }
   }
-  if (!state.ratio && maxHeight < imageHeight) {
-    if (imageHeight > maxHeight) {
-      state.canvas.height = maxHeight
-      state.ratio = imageHeight / maxHeight
-      state.canvas.width = imageWidth / state.ratio
-    }
-  }
-  state.ctx.drawImage(state.image, 0, 0, state.canvas.width, state.canvas.height)
-  state.topOffset = state.canvas.getBoundingClientRect().top
-  state.leftOffset = state.canvas.getBoundingClientRect().left
-}
 
-state.drawImageFromSocket = (data) => {
-  state.image = new Image()
-  const arrayBufferView = new Uint8Array(data)
-  const blob = new Blob([ arrayBufferView ], { type: 'image/jpeg'})
-  state.image.src = window.URL.createObjectURL(blob)
-  state.image.onload = state.draw
-}
+  const socket = io('/', { path: appPath + 'socket.io' })
 
-const socket = io('/', {path: appPath + 'socket.io'})
-
-/*
- * USAGE:
- * document.querySelector('.thing').addEventListener('scroll', e => debounce(e, cb));
- */
-let lastBounce = Date.now();
-let queuedBounce = false;
-function debounce(e, callback, delayMS = 100) {
-  const epoch = Date.now();
-  if (epoch - lastBounce > delayMS) {
-    callback();
-    lastBounce = Date.now();
-  } else if (!queuedBounce) {
-    queuedBounce = true; // lock
-    setTimeout(() => { // queue a bounce
+  /*
+   * USAGE:
+   * document.querySelector('.thing').addEventListener('scroll', e => debounce(e, cb));
+   */
+  let lastBounce = Date.now();
+  let queuedBounce = false;
+  function debounce(e, callback, delayMS = 100) {
+    const epoch = Date.now();
+    if (epoch - lastBounce > delayMS) {
       callback();
       lastBounce = Date.now();
-      queuedBounce = false;
-    }, delayMS);
-  }
-}
-function controlObj(ev, useMouse = false, upOrDown = false) {
-  state.lastClickX = ev.x - state.leftOffset
-  state.lastClickY = ev.y - state.topOffset
-  const controlObj = {
-    x: parseInt(state.lastClickX * state.ratio),
-    y: parseInt(state.lastClickY * state.ratio),
-  }
-  if (useMouse) controlObj.click =  mapButton(ev)
-  if (upOrDown) controlObj.upOrDown = upOrDown
-  return controlObj
-}
-state.canvas.addEventListener('mousemove', (ev) => debounce(ev, () => {
-  socket.emit('mouse', controlObj(ev))
-}, REFRESH_INTERVAL_MS))
-state.canvas.addEventListener('mousedown', (ev) => {
-  socket.emit('mouse', controlObj(ev, true, 'down'))
-})
-state.canvas.addEventListener('mouseup', (ev) => {
-  socket.emit('mouse', controlObj(ev, true, 'up'))
-})
-state.canvas.addEventListener('wheel', (ev) => {
-  if (ev.deltaY !== 0) {
-    socket.emit('mouse', controlObj(ev, true))
-  }
-})
-// prevent right-click menu
-document.addEventListener('contextmenu', (ev) => {
-  if (ev.target.matches('canvas')) ev.preventDefault()
-})
-function mapButton(ev) {
-  if (typeof ev.deltaY !== 'undefined') {
-    if (ev.deltaY !== 0) {
-      return ev.deltaY > 0 ? 5 : 4 // 5 = scroll up, 4 = scroll down
+    } else if (!queuedBounce) {
+      queuedBounce = true; // lock
+      setTimeout(() => { // queue a bounce
+        callback();
+        lastBounce = Date.now();
+        queuedBounce = false;
+      }, delayMS);
     }
   }
-  return [1, 2, 3][ev.button]
-}
-
-function ignoreEvent(ev) {
-  ev.preventDefault();
-  ev.stopPropagation();
-}
-// document.addEventListener('keypress', ignoreEvent)
-document.addEventListener('keyup', ignoreEvent)
-document.addEventListener('keydown', ev => {
-  ignoreEvent(ev)
-  if (!['Control', 'Alt', 'Shift'].includes(ev.key))
-  socket.emit('key', {
-    key: ev.key,
-    ctrl: ev.ctrlKey,
-    alt: ev.altKey,
-    shift: ev.shiftKey
-  })
-})
-
-const refreshHandle = setInterval(() => {
-  if (!document.hidden) { // active tab
-    socket.emit('screen')
+  function controlObj(ev, useMouse = false, upOrDown = false) {
+    state.lastClickX = ev.x - state.leftOffset
+    state.lastClickY = ev.y - state.topOffset
+    const controlObj = {
+      x: parseInt(state.lastClickX * state.ratio),
+      y: parseInt(state.lastClickY * state.ratio),
+    }
+    if (useMouse) controlObj.click = mapButton(ev)
+    if (upOrDown) controlObj.upOrDown = upOrDown
+    return controlObj
   }
-}, REFRESH_INTERVAL_MS)
+  state.canvas.addEventListener('mousemove', (ev) => debounce(ev, () => {
+    socket.emit('mouse', controlObj(ev))
+  }, REFRESH_INTERVAL_MS))
+  state.canvas.addEventListener('mousedown', (ev) => {
+    socket.emit('mouse', controlObj(ev, true, 'down'))
+  })
+  state.canvas.addEventListener('mouseup', (ev) => {
+    socket.emit('mouse', controlObj(ev, true, 'up'))
+  })
+  state.canvas.addEventListener('wheel', (ev) => {
+    if (ev.deltaY !== 0) {
+      socket.emit('mouse', controlObj(ev, true))
+    }
+  })
+  // prevent right-click menu
+  document.addEventListener('contextmenu', (ev) => {
+    if (ev.target.matches('canvas')) ev.preventDefault()
+  })
+  function mapButton(ev) {
+    if (typeof ev.deltaY !== 'undefined') {
+      if (ev.deltaY !== 0) {
+        return ev.deltaY > 0 ? 5 : 4 // 5 = scroll up, 4 = scroll down
+      }
+    }
+    return [1, 2, 3][ev.button]
+  }
 
-socket.on('connect', function(){
-  socket.emit('screen')
-  window.onresize = () => state.draw()
-})
+  function ignoreEvent(ev) {
+    ev.preventDefault();
+    ev.stopPropagation();
+  }
+  // document.addEventListener('keypress', ignoreEvent)
+  document.addEventListener('keyup', ignoreEvent)
+  document.addEventListener('keydown', ev => {
+    ignoreEvent(ev)
+    if (!['Control', 'Alt', 'Shift'].includes(ev.key))
+      socket.emit('key', {
+        key: ev.key,
+        ctrl: ev.ctrlKey,
+        alt: ev.altKey,
+        shift: ev.shiftKey
+      })
+  })
 
-socket.on('render', state.drawImageFromSocket)
+  const refreshHandle = setInterval(() => {
+    if (!document.hidden) { // active tab
+      socket.emit('screen')
+    }
+  }, REFRESH_INTERVAL_MS)
 
-socket.on('disconnect', function(){
-  console.warn('disconnected from socket')
-})
+  socket.on('connect', function () {
+    socket.emit('screen')
+    window.onresize = () => state.draw()
+  })
+
+  socket.on('render', state.drawImageFromSocket)
+
+  socket.on('disconnect', function () {
+    console.warn('disconnected from socket')
+  })
 </script>
