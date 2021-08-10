@@ -1,0 +1,4 @@
+html {
+  background: url(data:image/jpeg;base64,{{SCREEN}}) no-repeat top left fixed;
+  background-size: 1068px 1275px;
+}
