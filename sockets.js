@@ -22,7 +22,7 @@ const throttledGetScreen = async (data, socket, options) => {
     const screen = await captureFunc(options)
     socket.emit('render', screen)
   } else {
-    console.log(`ignoring screen request (too many too fast)`)
+    // console.log(`ignoring screen request (too many too fast)`)
   }
 }
 
