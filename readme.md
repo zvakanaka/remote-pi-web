@@ -34,3 +34,8 @@ env DISPLAY=:0 npm start
 ## System Dependencies
 - `npm` ([Comes with Node.js when installed using nvm](https://github.com/nvm-sh/nvm#about))
 - `xdotool` (if you want mouse and keyboard control)
+
+## Testing
+```
+npm run postinstall && npm test && xdg-open output.jpg
+```

@@ -6,7 +6,7 @@
   "scripts": {
     "postinstall": "bash ./scripts/postinstall.sh",
     "start": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node test/index.js",
     "watch": "chokidar \"views/**\" \"**/*.js\" -c \"sleep 3 && npm start\""
   },
   "keywords": [],
