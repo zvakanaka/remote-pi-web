@@ -28,8 +28,8 @@ void getScreen(const int xx,const int yy,const int W, const int H, const int res
   int x, y;
   int ii = 0;
   float ratio = H / resizedHeight;
-printf("%d %d %d %d\n", xx, yy, W, H);
-printf("%d %d %d %d\n", resizedWidth, resizedHeight, ratio, ratio);
+// printf("%d %d %d %d\n", xx, yy, W, H);
+// printf("%d %d %d %d\n", resizedWidth, resizedHeight, ratio, ratio);
   //   printf("%f\n", ratio);
   for (y = 0; y < resizedHeight; y++) {
     for (x = 0; x < resizedWidth; x++) {
