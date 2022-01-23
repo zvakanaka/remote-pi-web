@@ -1,7 +1,7 @@
 <canvas></canvas>
 <script src="./socket.io/socket.io.js"></script>
 <script>
-  const REFRESH_INTERVAL_MS = 0.1 * 1000
+  const CAPTURE_INTERVAL = 0.1 * 1000
   let lastRenderTime = 0
 
   function getAppPath() {
@@ -55,7 +55,7 @@
     state.image = new Image()
     const arrayBufferView = new Uint8Array(data)
     const blob = new Blob([arrayBufferView], { type: 'image/jpeg' })
-    if (Date.now() - lastRenderTime >= REFRESH_INTERVAL_MS) {
+    if (Date.now() - lastRenderTime >= CAPTURE_INTERVAL) {
       // console.log(`lastRenderTime: ${Date.now() - lastRenderTime}`)
       state.image.src = window.URL.createObjectURL(blob)
     } else {
@@ -103,7 +103,7 @@
   }
   state.canvas.addEventListener('mousemove', (ev) => debounce(ev, () => {
     socket.emit('mouse', controlObj(ev))
-  }, REFRESH_INTERVAL_MS))
+  }, CAPTURE_INTERVAL))
   state.canvas.addEventListener('mousedown', (ev) => {
     socket.emit('mouse', controlObj(ev, true, 'down'))
   })
@@ -149,7 +149,7 @@
     if (!document.hidden) { // active tab
       socket.emit('screen')
     }
-  }, REFRESH_INTERVAL_MS)
+  }, CAPTURE_INTERVAL)
 
   socket.on('connect', function () {
     socket.emit('screen')
