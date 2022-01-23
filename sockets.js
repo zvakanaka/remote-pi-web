@@ -14,10 +14,10 @@ if (process.env.VIEW_ONLY) {
 }
 
 let lastRenderTime = Date.now()
-const REFRESH_INTERVAL_MS = process.env.REFRESH_INTERVAL_MS || 0.1 * 1000
+const CAPTURE_INTERVAL = process.env.CAPTURE_INTERVAL || 0.1 * 1000
 
 const throttledGetScreen = async (data, socket, options) => {
-  if (Date.now() - lastRenderTime >= REFRESH_INTERVAL_MS) {
+  if (Date.now() - lastRenderTime >= CAPTURE_INTERVAL) {
     lastRenderTime = Date.now()
     const screen = await captureFunc(options)
     socket.emit('render', screen)
