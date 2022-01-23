@@ -6,8 +6,7 @@
 // THANK YOU JHolta: https://stackoverflow.com/a/16141058/4151489
 
 void getScreen(const int,   const int,   const int,   const int,   const int,             const int,                       unsigned char *);
-void getScreen(const int xx,const int yy,const int W, const int H, const int resizedWidth,const int resizedHeight, /*out*/ unsigned char * data) 
-{
+void getScreen(const int xx,const int yy,const int W, const int H, const int resizedWidth,const int resizedHeight, /*out*/ unsigned char * data) {
    Display *display = XOpenDisplay(NULL);
    Window root = DefaultRootWindow(display);
 
