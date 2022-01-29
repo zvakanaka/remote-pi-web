@@ -26,7 +26,7 @@ You can make your Pi think it has a screen by forcing HDMI output in the [`confi
 This can be done by removing the `#` from the line of the `config.txt` that looks like this: `#hdmi_safe=1`.
 
 ## Run
-Other env vars: `CAPTURE_METHOD` (defaults to 'native', 'scrot' requires it to be installed), `QUALITY` (defaults to 25), `REFRESH_INTERVAL_MS` (defaults to 500), `VIEW_ONLY` (defaults to false)
+Other env vars: `CAPTURE_METHOD` (defaults to 'native', 'scrot' requires it to be installed), `QUALITY` (defaults to 25), `CAPTURE_INTERVAL` (defaults to 500), `VIEW_ONLY` (defaults to false)
 ```
 env DISPLAY=:0 npm start
 ``` 
