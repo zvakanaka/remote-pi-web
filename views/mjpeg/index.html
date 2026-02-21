@@ -1,1 +1,180 @@
-<img id="stream" src="/stream">
+<img id="stream">
+<svg id="cursor" xmlns="http://www.w3.org/2000/svg">
+  <line x1="-20" y1="0" x2="-7" y2="0" stroke="black" stroke-width="3" stroke-opacity="0.4"/>
+  <line x1="7"   y1="0" x2="20" y2="0" stroke="black" stroke-width="3" stroke-opacity="0.4"/>
+  <line x1="0" y1="-20" x2="0" y2="-7" stroke="black" stroke-width="3" stroke-opacity="0.4"/>
+  <line x1="0" y1="7"   x2="0" y2="20" stroke="black" stroke-width="3" stroke-opacity="0.4"/>
+  <line x1="-20" y1="0" x2="-7" y2="0" stroke="white" stroke-width="1.5"/>
+  <line x1="7"   y1="0" x2="20" y2="0" stroke="white" stroke-width="1.5"/>
+  <line x1="0" y1="-20" x2="0" y2="-7" stroke="white" stroke-width="1.5"/>
+  <line x1="0" y1="7"   x2="0" y2="20" stroke="white" stroke-width="1.5"/>
+</svg>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const img = document.getElementById('stream')
+  const cursor = document.getElementById('cursor')
+  const socket = io()
+  const CAPTURE_INTERVAL = 0.1 * 1000
+
+  // Pull-based streaming: fetch one frame at a time — no lag buildup
+  const qp = new URLSearchParams(location.search)
+  const qs = qp.has('quality') ? `?quality=${encodeURIComponent(qp.get('quality'))}` : ''
+  let prevUrl = null
+  let nextFramePromise = fetch('/frame' + qs)
+  ;(async () => {
+    while (true) {
+      let resp
+      try {
+        resp = await nextFramePromise
+      } catch {
+        await new Promise(r => setTimeout(r, 200))
+        nextFramePromise = fetch('/frame' + qs)
+        continue
+      }
+      if (!resp.ok) {
+        await new Promise(r => setTimeout(r, 100))
+        nextFramePromise = fetch('/frame' + qs)
+        continue
+      }
+      const blob = await resp.blob()
+      nextFramePromise = fetch('/frame' + qs)   // pipeline: start next capture while displaying
+      const url = URL.createObjectURL(blob)
+      img.src = url
+      await new Promise(r => { img.onload = r; img.onerror = r })
+      if (!mouseOverImg) applyCursor()
+      if (prevUrl) URL.revokeObjectURL(prevUrl)
+      prevUrl = url
+    }
+  })()
+
+  function coordsFromClient(clientX, clientY) {
+    const rect = img.getBoundingClientRect()
+    if (!rect.width || !rect.height) return { x: 0, y: 0 }
+    return {
+      x: parseInt((clientX - rect.left) * img.naturalWidth / rect.width),
+      y: parseInt((clientY - rect.top) * img.naturalHeight / rect.height),
+    }
+  }
+
+  function mapButton(ev) {
+    if (typeof ev.deltaY !== 'undefined' && ev.deltaY !== 0) {
+      return ev.deltaY > 0 ? 5 : 4
+    }
+    return [1, 2, 3][ev.button]
+  }
+
+  // Remote cursor — show from socket when mouse is not hovering (i.e. touch/mobile)
+  let mouseOverImg = false
+  let lastCursorData = null
+
+  function applyCursor() {
+    if (!lastCursorData) return
+    const { x, y, screenWidth, screenHeight } = lastCursorData
+    const rect = img.getBoundingClientRect()
+    if (!rect.width) return
+    const cssLeft = rect.left + x * rect.width / screenWidth
+    const cssTop  = rect.top  + y * rect.height / screenHeight
+    cursor.style.left = cssLeft + 'px'
+    cursor.style.top  = cssTop  + 'px'
+    cursor.style.display = 'block'
+  }
+
+  socket.on('cursor', (data) => {
+    lastCursorData = data
+    if (mouseOverImg) return
+    applyCursor()
+  })
+
+  // Mouse — ignored while a touch is active to suppress synthetic mouse events from touch
+  let isTouching = false
+  let lastMouseMove = 0
+  img.addEventListener('mouseenter', () => { mouseOverImg = true })
+  img.addEventListener('mouseleave', () => {
+    mouseOverImg = false
+    cursor.style.display = 'none'
+  })
+  img.addEventListener('mousemove', (ev) => {
+    if (isTouching) return
+    cursor.style.left = ev.clientX + 'px'
+    cursor.style.top = ev.clientY + 'px'
+    cursor.style.display = 'block'
+    const now = Date.now()
+    if (now - lastMouseMove < CAPTURE_INTERVAL) return
+    lastMouseMove = now
+    socket.emit('mouse', coordsFromClient(ev.clientX, ev.clientY))
+  })
+  img.addEventListener('mousedown', (ev) => {
+    if (isTouching) return
+    socket.emit('mouse', { ...coordsFromClient(ev.clientX, ev.clientY), click: mapButton(ev), upOrDown: 'down' })
+  })
+  document.addEventListener('mouseup', (ev) => {
+    if (isTouching) return
+    socket.emit('mouse', { ...coordsFromClient(ev.clientX, ev.clientY), click: mapButton(ev), upOrDown: 'up' })
+  })
+  img.addEventListener('wheel', (ev) => {
+    ev.preventDefault()
+    if (ev.deltaY !== 0) socket.emit('mouse', { ...coordsFromClient(ev.clientX, ev.clientY), click: mapButton(ev) })
+  }, { passive: false })
+
+  // Touch — touchpad style: drag moves cursor relative, tap clicks in place
+  let touchStartX = 0, touchStartY = 0, touchLastX = 0, touchLastY = 0, touchDragging = false
+  const TAP_THRESHOLD = 10 // pixels of movement before treating as a drag
+
+  img.addEventListener('touchstart', (ev) => {
+    ev.preventDefault()
+    isTouching = true
+    const t = ev.changedTouches[0]
+    touchStartX = touchLastX = t.clientX
+    touchStartY = touchLastY = t.clientY
+    touchDragging = false
+  }, { passive: false })
+  img.addEventListener('touchmove', (ev) => {
+    ev.preventDefault()
+    const t = ev.changedTouches[0]
+    if (!touchDragging && Math.hypot(t.clientX - touchStartX, t.clientY - touchStartY) > TAP_THRESHOLD) {
+      touchDragging = true
+    }
+    if (!touchDragging) return
+    const now = Date.now()
+    if (now - lastMouseMove < CAPTURE_INTERVAL) return
+    lastMouseMove = now
+    const rect = img.getBoundingClientRect()
+    const ratioX = rect.width ? img.naturalWidth / rect.width : 1
+    const ratioY = rect.height ? img.naturalHeight / rect.height : 1
+    const dx = Math.round((t.clientX - touchLastX) * ratioX)
+    const dy = Math.round((t.clientY - touchLastY) * ratioY)
+    touchLastX = t.clientX
+    touchLastY = t.clientY
+    if (dx !== 0 || dy !== 0) socket.emit('mouse', { dx, dy })
+  }, { passive: false })
+  img.addEventListener('touchend', (ev) => {
+    ev.preventDefault()
+    if (!touchDragging) {
+      // Tap — click at current cursor position (no coordinates)
+      socket.emit('mouse', { click: 1 })
+    }
+    touchDragging = false
+    // Delay clearing isTouching so any synthetic mouse events the browser fires are suppressed
+    setTimeout(() => { isTouching = false }, 300)
+  }, { passive: false })
+  img.addEventListener('touchcancel', (ev) => {
+    ev.preventDefault()
+    touchDragging = false
+    setTimeout(() => { isTouching = false }, 300)
+  }, { passive: false })
+
+  // Keyboard
+  document.addEventListener('contextmenu', (ev) => ev.preventDefault())
+  document.addEventListener('keyup', (ev) => ev.preventDefault())
+  document.addEventListener('keydown', (ev) => {
+    ev.preventDefault()
+    if (!['Control', 'Alt', 'Shift'].includes(ev.key)) {
+      socket.emit('key', {
+        key: ev.key,
+        ctrl: ev.ctrlKey,
+        alt: ev.altKey,
+        shift: ev.shiftKey,
+      })
+    }
+  })
+</script>

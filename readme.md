@@ -33,7 +33,53 @@ env DISPLAY=:0 npm start
 
 ## System Dependencies
 - `npm` ([Comes with Node.js when installed using nvm](https://github.com/nvm-sh/nvm#about))
-- `xdotool` (if you want mouse and keyboard control)
+
+### X11
+- `xdotool` (mouse and keyboard control)
+- `libx11-dev` (to compile the screen capture binary)
+
+### Wayland (Sway and other wlroots-based compositors)
+- `libwayland-dev` + `wayland-scanner` (to compile the screen capture binary)
+- `wtype` (keyboard control)
+- `dotool` (mouse control) — requires the `dotoold` daemon to be running (see below)
+
+#### Setting up dotoold (Wayland mouse daemon)
+
+`dotool` injects mouse events via `/dev/uinput` through a daemon called `dotoold`.
+
+**Start the daemon for the current session:**
+```sh
+dotoold &
+```
+
+**Start automatically with Sway** — add to `~/.config/sway/config`:
+```
+exec dotoold
+```
+
+**Start as a systemd user service:**
+```sh
+# Create the service file
+cat > ~/.config/systemd/user/dotoold.service << 'EOF'
+[Unit]
+Description=dotool input daemon
+
+[Service]
+ExecStart=dotoold
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
+EOF
+
+systemctl --user enable --now dotoold
+```
+
+You may also need to add your user to the `input` group and reload udev rules:
+```sh
+sudo usermod -aG input $USER
+# log out and back in for the group change to take effect
+```
 
 ## Testing
 ```

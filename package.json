@@ -5,19 +5,21 @@
   "main": "index.js",
   "scripts": {
     "postinstall": "bash ./scripts/postinstall.sh",
-    "start": "node index.js",
+    "start": "node --watch index.js",
     "test": "node test/index.js",
     "watch": "chokidar \"views/**\" \"**/*.js\" -c \"sleep 3 && npm start\""
   },
   "keywords": [],
   "author": "Adam Quinton",
+  "engines": {
+    "node": ">=24"
+  },
   "license": "MIT",
   "dependencies": {
-    "express": "^4.17.1",
-    "ffi-napi": "^3.1.0",
+    "express": "^4.21.0",
     "mjpeg-server": "^0.3.1",
-    "sharp": "^0.28.3",
-    "socket.io": "^2.3.0"
+    "sharp": "^0.33.0",
+    "socket.io": "^4.7.0"
   },
   "devDependencies": {
     "chokidar-cli": "^2.1.0"

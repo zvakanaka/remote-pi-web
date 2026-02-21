@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="wlr_screencopy_unstable_v1">
+  <copyright>
+    Copyright © 2018 Simon Ser
+    Copyright © 2019 Andri Yngvason
+
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice (including the next
+    paragraph) shall be included in all copies or substantial portions of the
+    Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+    THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.
+  </copyright>
+
+  <interface name="zwlr_screencopy_manager_v1" version="3">
+    <description summary="manager to inform clients and begin capturing">
+      This object is a manager which offers requests to start capturing from a
+      source.
+    </description>
+
+    <request name="capture_output">
+      <description summary="capture an entire output">
+        Capture the next frame of an entire output.
+      </description>
+      <arg name="frame" type="new_id" interface="zwlr_screencopy_frame_v1"
+        summary="the new frame"/>
+      <arg name="overlay_cursor" type="int"
+        summary="composite cursor onto the frame"/>
+      <arg name="output" type="object" interface="wl_output"
+        summary="the output to capture"/>
+    </request>
+
+    <request name="capture_output_region">
+      <description summary="capture a region of an output">
+        Capture the next frame of an output's region.
+      </description>
+      <arg name="frame" type="new_id" interface="zwlr_screencopy_frame_v1"
+        summary="the new frame"/>
+      <arg name="overlay_cursor" type="int"
+        summary="composite cursor onto the frame"/>
+      <arg name="output" type="object" interface="wl_output"
+        summary="the output to capture"/>
+      <arg name="x" type="int" summary="x position of the region"/>
+      <arg name="y" type="int" summary="y position of the region"/>
+      <arg name="width" type="int" summary="width of the region"/>
+      <arg name="height" type="int" summary="height of the region"/>
+    </request>
+
+    <request name="destroy" type="destructor">
+      <description summary="destroy the manager">
+        Destroys the manager. This request can be sent at any time by the
+        client. Existing objects created by this manager are not affected.
+      </description>
+    </request>
+  </interface>
+
+  <interface name="zwlr_screencopy_frame_v1" version="3">
+    <description summary="a frame ready for copy">
+      This object represents a single frame.
+
+      After receiving the buffer event, the client must create a wl_buffer with
+      the given specifications and send a copy request.
+    </description>
+
+    <enum name="error">
+      <entry name="already_used" value="0"
+        summary="the object has already been used to copy a wl_buffer"/>
+    </enum>
+
+    <enum name="flags" bitfield="true">
+      <entry name="y_invert" value="1" summary="contents are y-inverted"/>
+    </enum>
+
+    <request name="copy">
+      <description summary="copy the frame">
+        Copy the frame to the supplied buffer. The buffer must have the correct
+        size, see zwlr_screencopy_frame_v1.buffer.
+
+        If the frame is successfully copied, a "flags" and a "ready" event are
+        sent. Otherwise, a "failed" event is sent.
+      </description>
+      <arg name="buffer" type="object" interface="wl_buffer"
+        summary="the buffer to copy the frame contents into"/>
+    </request>
+
+    <request name="destroy" type="destructor">
+      <description summary="delete this object">
+        Destroys the frame. This request can be sent at any time by the client.
+      </description>
+    </request>
+
+    <request name="copy_with_damage" since="2">
+      <description summary="copy the frame when it's damaged">
+        Same as copy, except it waits until there is damage to copy.
+      </description>
+      <arg name="buffer" type="object" interface="wl_buffer"
+        summary="the buffer to copy the frame contents into"/>
+    </request>
+
+    <event name="buffer">
+      <description summary="pixel format and buffer size">
+        Provides information about the wl_shm buffer to create. It is sent
+        once after the frame object is created if wl_shm buffers are
+        supported.
+
+        In protocol version 3+, this event may be sent multiple times. The
+        client should use the last received buffer event to create the buffer.
+        After all buffer events, a buffer_done event will be sent.
+      </description>
+      <arg name="format" type="uint" enum="wl_shm.format"
+        summary="buffer pixel format"/>
+      <arg name="width" type="uint" summary="buffer width"/>
+      <arg name="height" type="uint" summary="buffer height"/>
+      <arg name="stride" type="uint" summary="buffer stride"/>
+    </event>
+
+    <event name="flags">
+      <description summary="frame flags">
+        Provides flags about the frame. This event is sent once before the
+        ready event.
+      </description>
+      <arg name="flags" type="uint" enum="flags" summary="frame flags"/>
+    </event>
+
+    <event name="ready">
+      <description summary="indicates the frame is available for reading">
+        Called as soon as the frame is copied, indicating it is available
+        for reading.
+      </description>
+      <arg name="tv_sec_hi" type="uint"
+        summary="high 32 bits of the seconds part of the timestamp"/>
+      <arg name="tv_sec_lo" type="uint"
+        summary="low 32 bits of the seconds part of the timestamp"/>
+      <arg name="tv_nsec" type="uint"
+        summary="nanoseconds part of the timestamp"/>
+    </event>
+
+    <event name="failed">
+      <description summary="indicates the frame has failed">
+        This event indicates that the attempted frame copy has failed.
+        After receiving this event, the client should destroy the object.
+      </description>
+    </event>
+
+    <event name="damage" since="2">
+      <description summary="provides information about the damaged region">
+        This event is sent right before the ready event when copy_with_damage
+        is requested. It may be generated multiple times.
+      </description>
+      <arg name="x" type="uint" summary="damaged x coordinates"/>
+      <arg name="y" type="uint" summary="damaged y coordinates"/>
+      <arg name="width" type="uint" summary="current width"/>
+      <arg name="height" type="uint" summary="current height"/>
+    </event>
+
+    <event name="linux_dmabuf" since="3">
+      <description summary="provides information about a dmabuf buffer alternative">
+        Provides information about the linux-dmabuf buffer to create. It is
+        sent once after the frame object is created if linux-dmabuf buffers
+        are supported and the client has not disabled them.
+      </description>
+      <arg name="format" type="uint" summary="fourcc pixel format"/>
+      <arg name="width" type="uint" summary="buffer width"/>
+      <arg name="height" type="uint" summary="buffer height"/>
+    </event>
+
+    <event name="buffer_done" since="3">
+      <description summary="all buffer types reported">
+        This event is sent once after all buffer events have been sent.
+
+        The client should proceed to create a buffer of one of the supported
+        types, and send a copy request.
+      </description>
+    </event>
+  </interface>
+</protocol>
