@@ -53,10 +53,14 @@ def setup_mutter_session(bus):
 
     loop = GLib.MainLoop()
     node_id = [None]
+    timeout_id = [None]
 
     def on_pw_added(nid, **_kw):
         log(f'PipeWireStreamAdded node_id={nid}')
         node_id[0] = int(nid)
+        if timeout_id[0] is not None:
+            GLib.source_remove(timeout_id[0])  # cancel stale timeout
+            timeout_id[0] = None
         loop.quit()
 
     bus.add_signal_receiver(
@@ -70,7 +74,12 @@ def setup_mutter_session(bus):
     session.Start()
     log('waiting for PipeWireStreamAdded')
 
-    GLib.timeout_add_seconds(15, lambda: (log('timeout waiting for PipeWire'), loop.quit(), False)[2])
+    def on_timeout():
+        log('timeout waiting for PipeWire — aborting')
+        loop.quit()
+        return False
+
+    timeout_id[0] = GLib.timeout_add_seconds(15, on_timeout)
     loop.run()
 
     if node_id[0] is None:
@@ -139,12 +148,40 @@ def main():
     )
     sink = pipe.get_by_name('sink')
     current = [None]
+    frame_requested = [False]
     out = os.fdopen(sys.stdout.fileno(), 'wb', buffering=0)
     s_loop = GLib.MainLoop()
 
+    def write_current():
+        s = current[0]
+        if s is None:
+            return
+        buf = s.get_buffer()
+        ok, mapinfo = buf.map(Gst.MapFlags.READ)
+        if ok:
+            out.write(bytes(mapinfo.data))
+            buf.unmap(mapinfo)
+
     def on_sample(s):
         current[0] = s.emit('pull-sample')
+        if frame_requested[0]:
+            # Node.js sent '\n' before the first frame arrived — write it now
+            frame_requested[0] = False
+            write_current()
         return Gst.FlowReturn.OK
+
+    # Watch pipeline bus so GStreamer errors show up in the log
+    gst_bus = pipe.get_bus()
+    gst_bus.add_signal_watch()
+    def on_bus_msg(_bus, msg):
+        if msg.type == Gst.MessageType.ERROR:
+            err, dbg = msg.parse_error()
+            log(f'GStreamer ERROR: {err.message} | {dbg}')
+            s_loop.quit()
+        elif msg.type == Gst.MessageType.WARNING:
+            err, _ = msg.parse_warning()
+            log(f'GStreamer WARNING: {err.message}')
+    gst_bus.connect('message', on_bus_msg)
 
     sink.connect('new-sample', on_sample)
     pipe.set_state(Gst.State.PLAYING)
@@ -161,13 +198,11 @@ def main():
         if not data:
             s_loop.quit()
             return False
-        s = current[0]
-        if s is not None:
-            buf = s.get_buffer()
-            ok, mapinfo = buf.map(Gst.MapFlags.READ)
-            if ok:
-                out.write(bytes(mapinfo.data))
-                buf.unmap(mapinfo)
+        if current[0] is not None:
+            write_current()
+        else:
+            # No frame yet — defer write until on_sample fires
+            frame_requested[0] = True
         return True
 
     GLib.io_add_watch(sys.stdin.fileno(), GLib.IOCondition.IN, on_stdin)
