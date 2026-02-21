@@ -80,45 +80,48 @@ def setup_mutter_session(bus):
     return node_id[0]
 
 
+def get_dims_gdk():
+    """Get screen dimensions from GDK — fast, no GStreamer, always on GNOME."""
+    try:
+        gi.require_version('Gdk', '3.0')
+        from gi.repository import Gdk
+        display = Gdk.Display.get_default()
+        if display is None:
+            log('GDK: no default display')
+            return None, None
+        n = display.get_n_monitors()
+        if n == 0:
+            log('GDK: no monitors')
+            return None, None
+        # Bounding box of all monitors (handles multi-monitor setups)
+        max_x = max_y = 0
+        for i in range(n):
+            m = display.get_monitor(i)
+            g = m.get_geometry()
+            s = m.get_scale_factor()
+            max_x = max(max_x, (g.x + g.width) * s)
+            max_y = max(max_y, (g.y + g.height) * s)
+        return int(max_x), int(max_y)
+    except Exception as e:
+        log(f'GDK dims failed: {e}')
+        return None, None
+
+
 def main():
     Gst.init(None)
     dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
 
     divider = float(sys.argv[1]) if len(sys.argv) > 1 else 1.0
 
+    # ── Get screen dimensions from GDK (no GStreamer probe needed) ──────────
+    W, H = get_dims_gdk()
+    if not W or not H:
+        log('could not determine screen dimensions — aborting')
+        sys.exit(1)
+
     bus = dbus.SessionBus()
     node_id = setup_mutter_session(bus)
 
-    src = f'pipewiresrc path={node_id} do-timestamp=true'
-
-    # ── Step 1: probe full-resolution dims from one frame ──────────────────
-    probe = Gst.parse_launch(
-        f'{src} ! videoconvert ! video/x-raw,format=RGB ! '
-        f'appsink name=sink max-buffers=1 drop=true emit-signals=true sync=false'
-    )
-    probe_sink = probe.get_by_name('sink')
-    sample = [None]
-    probe_loop = GLib.MainLoop()
-
-    def on_probe_sample(s):
-        sample[0] = s.emit('pull-sample')
-        probe_loop.quit()
-        return Gst.FlowReturn.OK
-
-    probe_sink.connect('new-sample', on_probe_sample)
-    probe.set_state(Gst.State.PLAYING)
-    GLib.timeout_add_seconds(10, lambda: (probe_loop.quit(), False)[1])
-    probe_loop.run()
-    probe.set_state(Gst.State.NULL)
-
-    if not sample[0]:
-        log('no frame from probe pipeline')
-        sys.exit(1)
-
-    caps = sample[0].get_caps()
-    st = caps.get_structure(0)
-    W = st.get_int('width')[1]
-    H = st.get_int('height')[1]
     nW = round(W / divider)
     nH = round(H / divider)
 
@@ -126,7 +129,9 @@ def main():
     print(f'DIMS {W} {H}', file=sys.stderr, flush=True)
     log(f'screen={W}x{H}  scaled={nW}x{nH}  divider={divider}')
 
-    # ── Step 2: persistent stream pipeline at scaled resolution ────────────
+    src = f'pipewiresrc path={node_id} do-timestamp=true'
+
+    # ── Start persistent stream pipeline at scaled resolution ──────────────
     pipe = Gst.parse_launch(
         f'{src} ! videoconvert ! videoscale ! '
         f'video/x-raw,format=RGB,width={nW},height={nH} ! '
