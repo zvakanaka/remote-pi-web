@@ -81,6 +81,37 @@ sudo usermod -aG input $USER
 # log out and back in for the group change to take effect
 ```
 
+### GNOME Wayland (Ubuntu 24.04)
+> Only tested on Ubuntu 24.04
+
+**Screen capture** uses `org.gnome.Mutter.ScreenCast` via D-Bus + PipeWire + GStreamer. Install the required Python packages:
+```sh
+sudo apt install python3-gi python3-dbus gir1.2-gstreamer-1.0 gir1.2-gst-plugins-base-1.0 gstreamer1.0-pipewire
+```
+
+**Mouse and keyboard** both use `dotool` (no daemon required — dotool is spawned directly). Install from source:
+```sh
+sudo apt install libxkbcommon-dev scdoc
+git clone https://git.sr.ht/~geb/dotool
+cd dotool
+./build.sh
+sudo ./build.sh install
+```
+
+Then grant `/dev/uinput` access:
+```sh
+sudo cp /usr/local/share/dotool/80-dotool.rules /etc/udev/rules.d/
+sudo udevadm control --reload
+sudo udevadm trigger
+sudo usermod -aG input $USER
+# log out and back in (or reboot) for the group change to take effect
+```
+
+**Run:**
+```sh
+XDG_SESSION_TYPE=wayland XDG_CURRENT_DESKTOP=GNOME npm start
+```
+
 ## Testing
 ```
 npm run postinstall && npm test && xdg-open output.jpg
